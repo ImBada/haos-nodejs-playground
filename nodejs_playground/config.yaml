@@ -1,5 +1,5 @@
 name: Node.js Playground
-version: 0.3.1
+version: 0.3.4
 slug: nodejs_playground
 description: Open a browser terminal for running Node.js/npm apps inside Home Assistant OS.
 url: https://github.com/ImBada/haos-nodejs-playground
