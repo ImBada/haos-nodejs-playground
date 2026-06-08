@@ -3,15 +3,6 @@ set -euo pipefail
 
 cd /app
 
-if bashio::config.has_value 'env'; then
-  while IFS='=' read -r key value; do
-    if [[ -n "$key" ]]; then
-      export "$key=$value"
-      bashio::log.info "Exported env: $key"
-    fi
-  done < <(bashio::config 'env' | jq -r 'to_entries[] | "\(.key)=\(.value)"')
-fi
-
 cat >/etc/profile.d/nodejs-playground.sh <<'PROFILE'
 cd /app
 alias ll='ls -la'
