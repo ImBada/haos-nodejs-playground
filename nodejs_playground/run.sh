@@ -1,14 +1,22 @@
 #!/usr/bin/with-contenv bashio
 set -euo pipefail
 
-cd /app
+APP_DIR=/config
+SEED_DIR=/app
+
+mkdir -p "$APP_DIR"
+if [[ ! -f "$APP_DIR/package.json" && -f "$SEED_DIR/package.json" ]]; then
+  bashio::log.info "Seeding initial Node.js app files into add-on config folder"
+  cp -a "$SEED_DIR"/. "$APP_DIR"/
+fi
 
 cat >/tmp/nodejs-playground.bashrc <<'BASHRC'
-cd /app || true
+cd /config || true
 alias ll='ls -la'
 echo ""
 echo "Node.js Playground terminal"
-echo "App dir: /app"
+echo "App dir: /config"
+echo "Host dir: /addon_configs/<repo>_nodejs_playground"
 echo "Run commands manually, for example:"
 echo "  npm install"
 echo "  npm start"
