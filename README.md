@@ -19,3 +19,5 @@ https://github.com/ImBada/haos-nodejs-playground
 ```
 
 Then install **Node.js Playground**, start it, and open the Web UI terminal.
+
+The Node.js Playground terminal opens in the add-on public config folder (`/config` inside the container, `/addon_configs/<repo>_nodejs_playground` on the host). It attaches to a persistent `tmux` session, so refreshing the Web UI does not stop foreground commands such as `npm start`. Use Ctrl-C in the terminal to stop the running app.
