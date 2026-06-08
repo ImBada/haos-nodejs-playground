@@ -3,7 +3,7 @@ FROM $BUILD_FROM
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apk add --no-cache bash git jq nodejs npm ttyd
+RUN apk add --no-cache bash git jq nodejs npm tmux ttyd
 
 WORKDIR /app
 COPY app/ /app/
