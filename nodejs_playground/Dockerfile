@@ -3,7 +3,9 @@ FROM $BUILD_FROM
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
-RUN apk add --no-cache bash git jq nodejs npm socat tmux ttyd
+RUN apk add --no-cache bash git jq "nodejs~22" npm socat tmux ttyd \
+    && node --version | grep -Eq '^v22\.' \
+    && npm --version
 
 WORKDIR /app
 COPY app/ /app/
