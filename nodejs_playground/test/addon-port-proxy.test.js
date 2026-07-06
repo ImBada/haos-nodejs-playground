@@ -5,6 +5,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 
 const addonDir = path.resolve(__dirname, '..');
+const buildYamlPath = path.join(addonDir, 'build.yaml');
 const configPath = path.join(addonDir, 'config.yaml');
 const dockerfilePath = path.join(addonDir, 'Dockerfile');
 const runScriptPath = path.join(addonDir, 'run.sh');
@@ -14,7 +15,7 @@ const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 test('config exposes a stable proxy port and configurable app target port', () => {
   const config = read(configPath);
 
-  assert.match(config, /^version:\s+0\.3\.7$/m);
+  assert.match(config, /^version:\s+0\.3\.8$/m);
   assert.match(config, /^  3210\/tcp:\s+3000$/m);
   assert.match(config, /^  3210\/tcp:\s+External web server port for your Node\.js app$/m);
   assert.match(config, /^  app_port:\s+3000$/m);
@@ -25,6 +26,23 @@ test('image installs socat for TCP forwarding', () => {
   const dockerfile = read(dockerfilePath);
 
   assert.match(dockerfile, /\bapk add --no-cache\b[\s\S]*\bsocat\b/);
+});
+
+test('build uses a base image series that provides Node.js 22 LTS', () => {
+  const buildYaml = read(buildYamlPath);
+
+  assert.match(buildYaml, /^  aarch64: ghcr\.io\/hassio-addons\/base\/aarch64:18\.2\.1$/m);
+  assert.match(buildYaml, /^  amd64: ghcr\.io\/hassio-addons\/base\/amd64:18\.2\.1$/m);
+  assert.match(buildYaml, /^  armhf: ghcr\.io\/hassio-addons\/base\/armhf:18\.2\.1$/m);
+  assert.match(buildYaml, /^  armv7: ghcr\.io\/hassio-addons\/base\/armv7:18\.2\.1$/m);
+  assert.match(buildYaml, /^  i386: ghcr\.io\/hassio-addons\/base\/i386:18\.2\.1$/m);
+});
+
+test('image installs Node.js 22 LTS and validates the runtime major', () => {
+  const dockerfile = read(dockerfilePath);
+
+  assert.match(dockerfile, /\bapk add --no-cache\b[\s\S]*"nodejs~22"[\s\S]*\bnpm\b/);
+  assert.match(dockerfile, /\bnode --version \| grep -Eq '\^v22\\\.'/);
 });
 
 test('run script forwards public web traffic to the configured app port', () => {
