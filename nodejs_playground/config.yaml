@@ -1,5 +1,5 @@
 name: Node.js Playground
-version: 0.3.8
+version: 0.4.0
 slug: nodejs_playground
 description: Open a browser terminal for running Node.js/npm apps inside Home Assistant OS.
 url: https://github.com/ImBada/haos-nodejs-playground
@@ -27,5 +27,7 @@ ports_description:
   3210/tcp: External web server port for your Node.js app
 options:
   app_port: 3000
+  startup_script: ""
 schema:
   app_port: port
+  startup_script: str

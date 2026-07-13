@@ -22,6 +22,17 @@ Then install **Node.js Playground**, start it, and open the Web UI terminal.
 
 The Node.js Playground terminal opens in the add-on public config folder (`/config` inside the container, `/addon_configs/<repo>_nodejs_playground` on the host). It runs Node.js 22 LTS and attaches to a persistent `tmux` session, so refreshing the Web UI does not stop foreground commands such as `npm start`. Use Ctrl-C in the terminal to stop the running app.
 
+## Run a Script at Start-up
+
+Set `startup_script` in the add-on **Configuration** tab to a shell command that should run whenever the add-on starts. For example:
+
+```yaml
+app_port: 3000
+startup_script: npm start
+```
+
+The command runs from `/config` in the persistent terminal session. You can open the Web UI to see its output or use Ctrl-C to stop a foreground process. Leave `startup_script` empty to start with an idle terminal as before. Multiple commands and multi-line shell scripts are also supported.
+
 ## Expose a Web Server
 
 The add-on exposes a public web port through a small TCP proxy. By default, Home Assistant maps host port `3000` to the add-on proxy, and the proxy forwards traffic to your app on port `3000` inside the container.
