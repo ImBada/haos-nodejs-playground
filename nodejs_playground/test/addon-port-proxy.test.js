@@ -1,5 +1,6 @@
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -12,14 +13,16 @@ const runScriptPath = path.join(addonDir, 'run.sh');
 
 const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 
-test('config exposes a stable proxy port and configurable app target port', () => {
+test('config exposes the proxy, app target, and startup script options', () => {
   const config = read(configPath);
 
-  assert.match(config, /^version:\s+0\.3\.8$/m);
+  assert.match(config, /^version:\s+0\.4\.0$/m);
   assert.match(config, /^  3210\/tcp:\s+3000$/m);
   assert.match(config, /^  3210\/tcp:\s+External web server port for your Node\.js app$/m);
   assert.match(config, /^  app_port:\s+3000$/m);
+  assert.match(config, /^  startup_script:\s+""$/m);
   assert.match(config, /^  app_port:\s+port$/m);
+  assert.match(config, /^  startup_script:\s+str$/m);
 });
 
 test('image installs socat for TCP forwarding', () => {
@@ -55,6 +58,61 @@ test('run script forwards public web traffic to the configured app port', () => 
     runScript,
     /socat "TCP-LISTEN:\$\{PUBLIC_WEB_PORT\},fork,reuseaddr,bind=0\.0\.0\.0" "TCP:127\.0\.0\.1:\$\{APP_PORT\}" &/
   );
+});
+
+test('run script starts the configured script once in a persistent terminal session', () => {
+  const runScript = read(runScriptPath);
+
+  assert.match(runScript, /STARTUP_SCRIPT="\$\(bashio::config 'startup_script' 2>\/dev\/null \|\| true\)"/);
+  assert.match(runScript, /printf '%s\\n' "\$STARTUP_SCRIPT" >"\$STARTUP_SCRIPT_PENDING"/);
+  assert.match(runScript, /mv -- "\$NODEJS_PLAYGROUND_STARTUP_PENDING" "\$NODEJS_PLAYGROUND_STARTUP_RUNNING"/);
+  assert.match(runScript, /\. "\$NODEJS_PLAYGROUND_STARTUP_RUNNING"/);
+  assert.match(
+    runScript,
+    /tmux new-session -d -s "\$TMUX_SESSION" -c "\$APP_DIR" \/bin\/bash --noprofile --rcfile \/tmp\/nodejs-playground\.bashrc -i/
+  );
+});
+
+test('terminal startup script runs once even if another interactive shell starts', () => {
+  const runScript = read(runScriptPath);
+  const bashrcMatch = runScript.match(
+    /cat >\/tmp\/nodejs-playground\.bashrc <<'BASHRC'\n([\s\S]*?)\nBASHRC/
+  );
+  assert.ok(bashrcMatch, 'generated terminal bashrc should be present');
+
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nodejs-playground-'));
+  const bashrcPath = path.join(tempDir, 'bashrc');
+  const pendingPath = path.join(tempDir, 'startup.pending.sh');
+  const runningPath = path.join(tempDir, 'startup.sh');
+  const markerPath = path.join(tempDir, 'startup-runs');
+
+  try {
+    fs.writeFileSync(bashrcPath, bashrcMatch[1]);
+    fs.writeFileSync(pendingPath, 'printf \'ran\\n\' >>"$STARTUP_MARKER"\n');
+
+    const env = {
+      ...process.env,
+      NODEJS_PLAYGROUND_APP_PORT: '3000',
+      NODEJS_PLAYGROUND_STARTUP_PENDING: pendingPath,
+      NODEJS_PLAYGROUND_STARTUP_RUNNING: runningPath,
+      STARTUP_MARKER: markerPath,
+    };
+    const shellOptions = {
+      cwd: tempDir,
+      env,
+      input: 'exit\n',
+      stdio: ['pipe', 'pipe', 'pipe'],
+    };
+
+    execFileSync('bash', ['--noprofile', '--rcfile', bashrcPath, '-i'], shellOptions);
+    execFileSync('bash', ['--noprofile', '--rcfile', bashrcPath, '-i'], shellOptions);
+
+    assert.equal(read(markerPath), 'ran\n');
+    assert.equal(fs.existsSync(pendingPath), false);
+    assert.equal(fs.existsSync(runningPath), true);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
 });
 
 test('run script remains valid bash syntax', () => {
