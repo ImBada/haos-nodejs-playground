@@ -1,14 +1,11 @@
 name: Node.js Playground
-version: 0.4.0
+version: 0.5.0
 slug: nodejs_playground
-description: Open a browser terminal for running Node.js/npm apps inside Home Assistant OS.
+description: Open a browser terminal for running Node.js/npm and Bun apps inside Home Assistant OS.
 url: https://github.com/ImBada/haos-nodejs-playground
 arch:
   - aarch64
   - amd64
-  - armhf
-  - armv7
-  - i386
 startup: services
 boot: auto
 init: false
@@ -24,7 +21,7 @@ map:
 ports:
   3210/tcp: 3000
 ports_description:
-  3210/tcp: External web server port for your Node.js app
+  3210/tcp: External web server port for your Node.js or Bun app
 options:
   app_port: 3000
   startup_script: ""

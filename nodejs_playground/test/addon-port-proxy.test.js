@@ -16,13 +16,20 @@ const read = (filePath) => fs.readFileSync(filePath, 'utf8');
 test('config exposes the proxy, app target, and startup script options', () => {
   const config = read(configPath);
 
-  assert.match(config, /^version:\s+0\.4\.0$/m);
+  assert.match(config, /^version:\s+0\.5\.0$/m);
   assert.match(config, /^  3210\/tcp:\s+3000$/m);
-  assert.match(config, /^  3210\/tcp:\s+External web server port for your Node\.js app$/m);
+  assert.match(config, /^  3210\/tcp:\s+External web server port for your Node\.js or Bun app$/m);
   assert.match(config, /^  app_port:\s+3000$/m);
   assert.match(config, /^  startup_script:\s+""$/m);
   assert.match(config, /^  app_port:\s+port$/m);
   assert.match(config, /^  startup_script:\s+str$/m);
+});
+
+test('add-on only advertises architectures supported by Bun', () => {
+  const config = read(configPath);
+
+  assert.match(config, /^arch:\n  - aarch64\n  - amd64$/m);
+  assert.doesNotMatch(config, /^  - (?:armhf|armv7|i386)$/m);
 });
 
 test('image installs socat for TCP forwarding', () => {
@@ -36,9 +43,6 @@ test('build uses a base image series that provides Node.js 22 LTS', () => {
 
   assert.match(buildYaml, /^  aarch64: ghcr\.io\/hassio-addons\/base\/aarch64:18\.2\.1$/m);
   assert.match(buildYaml, /^  amd64: ghcr\.io\/hassio-addons\/base\/amd64:18\.2\.1$/m);
-  assert.match(buildYaml, /^  armhf: ghcr\.io\/hassio-addons\/base\/armhf:18\.2\.1$/m);
-  assert.match(buildYaml, /^  armv7: ghcr\.io\/hassio-addons\/base\/armv7:18\.2\.1$/m);
-  assert.match(buildYaml, /^  i386: ghcr\.io\/hassio-addons\/base\/i386:18\.2\.1$/m);
 });
 
 test('image installs Node.js 22 LTS and validates the runtime major', () => {
@@ -46,6 +50,24 @@ test('image installs Node.js 22 LTS and validates the runtime major', () => {
 
   assert.match(dockerfile, /\bapk add --no-cache\b[\s\S]*"nodejs~22"[\s\S]*\bnpm\b/);
   assert.match(dockerfile, /\bnode --version \| grep -Eq '\^v22\\\.'/);
+});
+
+test('image installs and verifies pinned Bun binaries for each supported architecture', () => {
+  const dockerfile = read(dockerfilePath);
+
+  assert.match(dockerfile, /^ARG BUN_VERSION=1\.3\.14$/m);
+  assert.match(
+    dockerfile,
+    /amd64\)[\s\S]*BUN_TARGET=x64-musl-baseline;[\s\S]*BUN_SHA256=56a7d6806cf155536c0178f0ea5fbd098e684fa509ebdb4fc0a7e19fb65382dc/
+  );
+  assert.match(
+    dockerfile,
+    /aarch64\)[\s\S]*BUN_TARGET=aarch64-musl;[\s\S]*BUN_SHA256=b98e0ad3625c5c00d1d5b5ff55605c7adddbfae151861e68ade57b2d3b8703bb/
+  );
+  assert.match(dockerfile, /echo "\$\{BUN_SHA256\}  \/tmp\/bun\.zip" \| sha256sum -c -/);
+  assert.match(dockerfile, /ln -s \/usr\/local\/bin\/bun \/usr\/local\/bin\/bunx/);
+  assert.match(dockerfile, /bun --version \| grep -Fx "\$\{BUN_VERSION\}"/);
+  assert.match(dockerfile, /bunx --version \| grep -Fx "\$\{BUN_VERSION\}"/);
 });
 
 test('run script forwards public web traffic to the configured app port', () => {
@@ -71,6 +93,15 @@ test('run script starts the configured script once in a persistent terminal sess
     runScript,
     /tmux new-session -d -s "\$TMUX_SESSION" -c "\$APP_DIR" \/bin\/bash --noprofile --rcfile \/tmp\/nodejs-playground\.bashrc -i/
   );
+});
+
+test('terminal advertises both npm and Bun commands', () => {
+  const runScript = read(runScriptPath);
+
+  assert.match(runScript, /echo "Runtimes: Node\.js \$\(node --version\), Bun \$\(bun --version\)"/);
+  assert.match(runScript, /echo "  npm install"/);
+  assert.match(runScript, /echo "  bun install"/);
+  assert.match(runScript, /echo "  bun server\.js"/);
 });
 
 test('terminal startup script runs once even if another interactive shell starts', () => {

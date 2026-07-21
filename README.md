@@ -4,7 +4,7 @@ Home Assistant add-on repository for small personal utilities.
 
 ## Add-ons
 
-- [Node.js Playground](./nodejs_playground): browser terminal for manually running Node.js 22 LTS/npm apps inside Home Assistant OS.
+- [Node.js Playground](./nodejs_playground): browser terminal for manually running Node.js 22 LTS/npm and Bun apps inside Home Assistant OS.
 
 ## Add This Repository
 
@@ -20,7 +20,9 @@ https://github.com/ImBada/haos-nodejs-playground
 
 Then install **Node.js Playground**, start it, and open the Web UI terminal.
 
-The Node.js Playground terminal opens in the add-on public config folder (`/config` inside the container, `/addon_configs/<repo>_nodejs_playground` on the host). It runs Node.js 22 LTS and attaches to a persistent `tmux` session, so refreshing the Web UI does not stop foreground commands such as `npm start`. Use Ctrl-C in the terminal to stop the running app.
+The Node.js Playground terminal opens in the add-on public config folder (`/config` inside the container, `/addon_configs/<repo>_nodejs_playground` on the host). It includes Node.js 22 LTS/npm and Bun, and attaches to a persistent `tmux` session, so refreshing the Web UI does not stop foreground commands such as `npm start` or `bun server.js`. Use Ctrl-C in the terminal to stop the running app.
+
+Bun provides official Linux binaries for 64-bit x86 and ARM only, so the add-on supports `amd64` and `aarch64` Home Assistant systems.
 
 ## Run a Script at Start-up
 
@@ -29,6 +31,13 @@ Set `startup_script` in the add-on **Configuration** tab to a shell command that
 ```yaml
 app_port: 3000
 startup_script: npm start
+```
+
+Or run the seeded example with Bun:
+
+```yaml
+app_port: 3000
+startup_script: bun server.js
 ```
 
 The command runs from `/config` in the persistent terminal session. You can open the Web UI to see its output or use Ctrl-C to stop a foreground process. Leave `startup_script` empty to start with an idle terminal as before. Multiple commands and multi-line shell scripts are also supported.
